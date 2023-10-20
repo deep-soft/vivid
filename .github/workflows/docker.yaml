@@ -2,9 +2,10 @@
 name: docker
 
 on:
-  push:
-    paths-ignore:
-      - "**.md**"
+  workflow_dispatch:
+#  push:
+#    paths-ignore:
+#      - "**.md**"
 jobs:
   build:
     runs-on: ubuntu-latest
