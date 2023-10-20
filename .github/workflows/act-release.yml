@@ -112,11 +112,12 @@ jobs:
         echo "PROJECT_MAINTAINER=$(sed -n 's/^authors = \["\(.*\)"\]/\1/p' Cargo.toml)" >> $GITHUB_ENV
         echo "PROJECT_HOMEPAGE=$(sed -n 's/^homepage = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
 
-    - name: Install Rust toolchain
+    - name: Install rust toolchain (v${{ needs.crate_metadata.outputs.msrv }})
       uses: deep-soft/rust-toolchain@master
-      # uses: dtolnay/rust-toolchain@stable
+      # uses: dtolnay/rust-toolchain@master
       with:
-        targets: ${{ matrix.job.target }}
+        toolchain: ${{ needs.crate_metadata.outputs.msrv }}
+        components: clippy
 
     - name: Install cross
       if: matrix.job.use-cross
