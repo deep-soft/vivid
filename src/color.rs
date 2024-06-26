@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::error::{Result, VividError};
 use ansi_colours::ansi256_from_rgb;
 
@@ -20,11 +22,44 @@ impl ColorType {
             ColorType::Background => "48",
         }
     }
+
+    /// Returns `10` if this is `Background`
+    ///
+    /// This is to be added to a foreground ansi 3-bit code
+    /// to allow it to be a background
+    fn bg_addition(self) -> u8 {
+        match self {
+            ColorType::Foreground => 0,
+            ColorType::Background => 10,
+        }
+    }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     Rgb(u8, u8, u8),
+    Ansi3Bit(Ansi3Bit),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(u8)]
+pub enum Ansi3Bit {
+    Black = 30,
+    Red = 31,
+    Green = 32,
+    Yellow = 33,
+    Blue = 34,
+    Magenta = 35,
+    Cyan = 36,
+    White = 37,
+    BrightBlack = 90,
+    BrightRed = 91,
+    BrightGreen = 92,
+    BrightYellow = 93,
+    BrightBlue = 94,
+    BrightMagenta = 95,
+    BrightCyan = 96,
+    BrightWhite = 97,
 }
 
 impl Color {
@@ -64,12 +99,44 @@ impl Color {
                     code = ansi256_from_rgb((*r, *g, *b))
                 ),
             },
+            Color::Ansi3Bit(color) => format!("{}", *color as u8 + colortype.bg_addition()),
         }
+    }
+
+    fn from_ansi_name(s: &str) -> Result<Color> {
+        match s {
+            "ansi:black" => Ok(Self::Ansi3Bit(Ansi3Bit::Black)),
+            "ansi:red" => Ok(Self::Ansi3Bit(Ansi3Bit::Red)),
+            "ansi:green" => Ok(Self::Ansi3Bit(Ansi3Bit::Green)),
+            "ansi:yellow" => Ok(Self::Ansi3Bit(Ansi3Bit::Yellow)),
+            "ansi:blue" => Ok(Self::Ansi3Bit(Ansi3Bit::Blue)),
+            "ansi:magenta" => Ok(Self::Ansi3Bit(Ansi3Bit::Magenta)),
+            "ansi:cyan" => Ok(Self::Ansi3Bit(Ansi3Bit::Cyan)),
+            "ansi:white" => Ok(Self::Ansi3Bit(Ansi3Bit::White)),
+            "ansi:bright_black" => Ok(Self::Ansi3Bit(Ansi3Bit::BrightBlack)),
+            "ansi:bright_red" => Ok(Self::Ansi3Bit(Ansi3Bit::BrightRed)),
+            "ansi:bright_green" => Ok(Self::Ansi3Bit(Ansi3Bit::BrightGreen)),
+            "ansi:bright_yellow" => Ok(Self::Ansi3Bit(Ansi3Bit::BrightYellow)),
+            "ansi:bright_blue" => Ok(Self::Ansi3Bit(Ansi3Bit::BrightBlue)),
+            "ansi:bright_magenta" => Ok(Self::Ansi3Bit(Ansi3Bit::BrightMagenta)),
+            "ansi:bright_cyan" => Ok(Self::Ansi3Bit(Ansi3Bit::BrightCyan)),
+            "ansi:bright_white" => Ok(Self::Ansi3Bit(Ansi3Bit::BrightWhite)),
+            _ => Err(VividError::ColorParseError(s.to_string())),
+        }
+    }
+}
+
+impl FromStr for Color {
+    type Err = VividError;
+    fn from_str(s: &str) -> Result<Self> {
+        Color::from_hex_str(s).or(Color::from_ansi_name(s))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::color::Ansi3Bit;
+
     use super::{Color, ColorMode, ColorType};
 
     #[test]
@@ -121,5 +188,25 @@ mod tests {
 
         let style_24bit = red.get_style(ColorType::Foreground, ColorMode::BitDepth24);
         assert_eq!("38;2;255;0;0", style_24bit);
+    }
+
+    #[test]
+    fn ansi_3bit() {
+        assert_eq!(
+            Color::Ansi3Bit(Ansi3Bit::Black),
+            "ansi:black".parse().unwrap()
+        );
+        assert_eq!(
+            Color::Ansi3Bit(Ansi3Bit::Green),
+            "ansi:green".parse().unwrap()
+        );
+        assert_eq!(
+            Color::Ansi3Bit(Ansi3Bit::BrightYellow),
+            "ansi:bright_yellow".parse().unwrap()
+        );
+        assert_eq!(
+            Color::Ansi3Bit(Ansi3Bit::BrightCyan),
+            "ansi:bright_cyan".parse().unwrap()
+        );
     }
 }
